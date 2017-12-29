@@ -1,33 +1,46 @@
 package main
 
-import "sync"
+import (
+	"sync"
+	"math/rand"
+	"github.com/nsf/termbox-go"
+)
 
 type environment struct {
 	mutex sync.RWMutex
-	width uint32
-	height uint32
-	tiles [][]rune
+	width int
+	height int
+	tiles [][]termbox.Cell
 	entities [][](*entity)
 }
 
-func initEnvironment(w uint32, h uint32) environment {
+func initEnvironment(w int, h int) environment {
 	env := environment{
 		mutex: sync.RWMutex{},
 		width: w,
 		height: h,
-		tiles: make([][]rune, w),
+		tiles: make([][]termbox.Cell, w),
 		entities: make([][](*entity), w),
 	}
 	for row := 0; row < int(w); row++ {
-		env.tiles[row] = make([]rune, h)
+		env.tiles[row] = make([]termbox.Cell, h)
 		env.entities[row] = make([](*entity), h)
 	}
 	return env
 }
 
+//Totally random.  Just temporary for now.
+func generateEnvironment(e environment) environment {
+	for x := 0; x < e.width; x++ {
+		for y := 0; y < e.height; y++ {
+			e.tiles[x][y] = termbox.Cell{Ch: rune(rand.Int() % 10 + 48), Fg: termbox.Attribute(rand.Int() % 7 + 2), Bg: termbox.Attribute(rand.Int() % 7 + 2)}
+		}
+	}
+	return e
+}
+
 func runEnvController(envSnd chan<- *environment, envRqst <-chan bool, envMdfy <-chan bool, entRcv <-chan *entity) {			//remember, change the type of envMdfy some time
-	//generate/load here first
-	env := initEnvironment(12, 8)
+	env := generateEnvironment(initEnvironment(50, 50))
 	
 	for {
 		select{

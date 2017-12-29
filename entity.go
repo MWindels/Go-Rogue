@@ -1,14 +1,18 @@
 package main
 
+import "github.com/nsf/termbox-go"
+
 type entity struct {
 	symbol rune
-	x uint32
-	y uint32
+	color termbox.Attribute
+	x int
+	y int
 }
 
-func initEntity(s rune, x uint32, y uint32) entity {
+func initEntity(s rune, col termbox.Attribute, x int, y int) entity {
 	ent := entity{
 		symbol: s,
+		color: col,
 		x: x,
 		y: y,
 	}
@@ -16,7 +20,7 @@ func initEntity(s rune, x uint32, y uint32) entity {
 }
 
 func runEntity(envRcv <-chan *environment, envRqst chan<- bool, entSnd chan<- *entity) {
-	ent := initEntity('@', 1, 2)
+	ent := initEntity('@', 0, 1, 2)
 	
 	entSnd <- &ent
 	envRqst <- true
