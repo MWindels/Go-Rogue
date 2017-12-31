@@ -6,6 +6,24 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+const (
+	displayNothing uint8 = iota
+	displayMainMenu
+	displayNewGame
+	displayEnvironment
+	displayPause
+)
+
+//Maps to the state of the game.  For all intents and purposes, this is read-only.
+var (
+	stateOverlays = [...]overlay{
+		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayMainMenu, addLabels(initCanvasConstants(), initLabel("GO ROGUE", termbox.ColorDefault, termbox.ColorBlack, initPoint(0.5, 0.1), xAlignCentre, yAlignCentre)))),
+		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayNewGame, addLabels(initCanvasConstants(), initLabel("Start a New Game...", termbox.ColorDefault, termbox.ColorBlack, initPoint(0.5, 0.15), xAlignCentre, yAlignCentre)))),
+		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayEnvironment, initCanvasConstants())),
+		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayEnvironment, initCanvasConstants()), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.3, 0.3, 0.4, 0.4), displayPause, addLabels(initCanvasConstants(), initLabel("Game Paused", termbox.ColorDefault, termbox.ColorBlack, initPoint(0.5, 0.2), xAlignCentre, yAlignCentre)))),
+	}
+)
+
 //Sometimes the maxLineLen can be a little off due to rounding errors on canvases smaller than the screen size (maxLines is probably also affected)
 func drawLabel(border rectangle, lbl label) {
 	lblLen := float64(len([]rune(lbl.text)))
@@ -79,10 +97,14 @@ func drawOverlay(o overlay, env *environment) {
 		
 		//Draw Variable Canvas Contents
 		switch o.canvases[i].variableContents {
-		case displayTitle:
+		case displayMainMenu:
+			
+		case displayNewGame:
 			
 		case displayEnvironment:
 			drawEnvironment(scaledBorder, env)
+		case displayPause:
+			
 		}
 		
 		//Draw Constant Canvas Contents
@@ -111,17 +133,15 @@ func drawEnvironment(border rectangle, env *environment) {
 	env.mutex.RUnlock()
 }
 
-func runRenderer(envRcv <-chan *environment, envRqst chan<- bool) {
+func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan uint8, stRqst chan<- bool) {
 	envRqst <- true
 	env := <- envRcv
-	
-	//Need a channel for delivering state or overlays
-	o := addToOverlay(initOverlay(), initCanvas(opaque, '▓', 2, 0, initRectangle(0.0, 0.0, 0.8, 1.0), displayEnvironment, initCanvasConstants()), initCanvas(opaque, '▓', 3, 0, initRectangle(0.8, 0.0, 0.2, 1.0), displayNothing, addLabels(initCanvasConstants(), initLabel("abcdefghij", termbox.ColorBlue, termbox.ColorWhite, initPoint(0.5, 0.1), xAlignCentre, yAlignBelow))))
 	
 	for {
 		time.Sleep(time.Second)
 		
-		drawOverlay(o, env)
+		stRqst <- true
+		drawOverlay(stateOverlays[<- stRcv], env)
 		
 		err := termbox.Flush()
 		if err != nil {

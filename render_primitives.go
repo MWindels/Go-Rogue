@@ -6,13 +6,13 @@ import (
 )
 
 const (
-	xAlignLeft = iota
+	xAlignLeft uint8 = iota
 	xAlignCentre
 	xAlignRight
 )
 
 const (
-	yAlignBelow = iota
+	yAlignBelow uint8 = iota
 	yAlignCentre
 	yAlignAbove
 )

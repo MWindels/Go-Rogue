@@ -3,24 +3,40 @@ package main
 import "github.com/nsf/termbox-go"
 
 const (
-	mainMenu uint8 = iota
+	stateMainMenu uint8 = iota
+	stateNewGame
+	stateRunningGame
+	statePausedGame
+	stateExit
 )
 
 type game struct {
-	gameState uint8
+	state uint8
+	
 	envSnd chan *environment
 	envRqst chan bool
 	envMdfy chan bool					//should become it's own type
+	
 	entSnd chan *entity
+	
+	stSnd chan uint8
+	stRqst chan bool
+	stMdfy chan uint8
 }
 
 func initGame() game {
 	g := game{
-		gameState: mainMenu,
+		state: stateMainMenu,
+		
 		envSnd: make(chan *environment),
 		envRqst: make(chan bool),
 		envMdfy: make(chan bool),			//likewise here
+		
 		entSnd: make(chan *entity),
+		
+		stSnd: make(chan uint8),
+		stRqst: make(chan bool),
+		stMdfy: make(chan uint8),
 	}
 	return g
 }
@@ -34,12 +50,19 @@ func main() {
 	
 	g := initGame()
 	
+	//Testing stuff
 	go runEnvController(g.envSnd, g.envRqst, g.envMdfy, g.entSnd)
-	go runRenderer(g.envSnd, g.envRqst)
+	go runRenderer(g.envSnd, g.envRqst, g.stSnd, g.stRqst)
+	go runInputParser(g.envSnd, g.envRqst, g.envMdfy, g.stSnd, g.stRqst, g.stMdfy)
 	go runEntity(g.envSnd, g.envRqst, g.entSnd)
+	//Testing stuff
 	
-	ch := 'f'
-	for ch != 'e'{
-		ch = termbox.PollEvent().Ch
+	for g.state != stateExit {
+		select{
+		case <- g.stRqst:
+			g.stSnd <- g.state
+		case newState := <- g.stMdfy:
+			g.state = newState
+		}
 	}
 }

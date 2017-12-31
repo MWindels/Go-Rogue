@@ -3,14 +3,8 @@ package main
 import "github.com/nsf/termbox-go"
 
 const (
-	opaque = 1 << iota
+	opaque uint8 = 1 << iota
 	borderless
-)
-
-const (
-	displayNothing = iota
-	displayTitle
-	displayEnvironment
 )
 
 type canvasConstants struct {

@@ -1,7 +1,7 @@
 package main
 
 const (
-	upperLeft = iota
+	upperLeft int = iota
 	upperRight
 	lowerRight
 	lowerLeft
