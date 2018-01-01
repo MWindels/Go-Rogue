@@ -8,10 +8,21 @@ const (
 	stateRunningGame
 	statePausedGame
 	stateExit
+	totalStates
 )
+
+var (
+	subStatesByState [totalStates]uint = [totalStates]uint{1, 1, 0, 1, 0}
+)
+
+type subStateModification struct {
+	index uint
+	value int
+}
 
 type game struct {
 	state uint8
+	subState []int
 	
 	envSnd chan *environment
 	envRqst chan bool
@@ -22,11 +33,24 @@ type game struct {
 	stSnd chan uint8
 	stRqst chan bool
 	stMdfy chan uint8
+	
+	sstSnd chan int
+	sstRqst chan uint
+	sstMdfy chan subStateModification
+}
+
+func initSubStateModification(ind uint, val int) subStateModification {
+	ssm := subStateModification{
+		index: ind,
+		value: val,
+	}
+	return ssm
 }
 
 func initGame() game {
 	g := game{
 		state: stateMainMenu,
+		subState: make([]int, subStatesByState[stateMainMenu], subStatesByState[stateMainMenu]),
 		
 		envSnd: make(chan *environment),
 		envRqst: make(chan bool),
@@ -37,6 +61,10 @@ func initGame() game {
 		stSnd: make(chan uint8),
 		stRqst: make(chan bool),
 		stMdfy: make(chan uint8),
+		
+		sstSnd: make(chan int),
+		sstRqst: make(chan uint),
+		sstMdfy: make(chan subStateModification),
 	}
 	return g
 }
@@ -52,8 +80,8 @@ func main() {
 	
 	//Testing stuff
 	go runEnvController(g.envSnd, g.envRqst, g.envMdfy, g.entSnd)
-	go runRenderer(g.envSnd, g.envRqst, g.stSnd, g.stRqst)
-	go runInputParser(g.envSnd, g.envRqst, g.envMdfy, g.stSnd, g.stRqst, g.stMdfy)
+	go runRenderer(g.envSnd, g.envRqst, g.stSnd, g.stRqst, g.sstSnd, g.sstRqst)
+	go runInputParser(g.envSnd, g.envRqst, g.envMdfy, g.stSnd, g.stRqst, g.stMdfy, g.sstSnd, g.sstRqst, g.sstMdfy)
 	go runEntity(g.envSnd, g.envRqst, g.entSnd)
 	//Testing stuff
 	
@@ -62,7 +90,18 @@ func main() {
 		case <- g.stRqst:
 			g.stSnd <- g.state
 		case newState := <- g.stMdfy:
-			g.state = newState
+			if 0 <= newState && newState < totalStates {
+				g.state = newState
+				g.subState = make([]int, subStatesByState[g.state], subStatesByState[g.state])
+			}
+		case index := <- g.sstRqst:
+			if index < subStatesByState[g.state] {
+				g.sstSnd <- g.subState[index]
+			}
+		case modification := <- g.sstMdfy:
+			if modification.index < subStatesByState[g.state] {
+				g.subState[modification.index] = modification.value
+			}
 		}
 	}
 }

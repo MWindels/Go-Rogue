@@ -133,7 +133,7 @@ func drawEnvironment(border rectangle, env *environment) {
 	env.mutex.RUnlock()
 }
 
-func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan uint8, stRqst chan<- bool) {
+func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan uint8, stRqst chan<- bool, sstRcv <-chan int, sstRqst chan<- uint) {
 	envRqst <- true
 	env := <- envRcv
 	
