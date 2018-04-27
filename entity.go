@@ -1,6 +1,9 @@
 package main
 
-import "github.com/nsf/termbox-go"
+import (
+	"github.com/nsf/termbox-go"
+	"time"
+)
 
 type entity struct {
 	symbol rune
@@ -31,5 +34,7 @@ func runEntity(envRcv <-chan *environment, envRqst chan<- bool, entSnd chan<- *e
 	env.mutex.RUnlock()
 	//Testing
 	
-	for {}
+	for {
+		time.Sleep(time.Second * 1)
+	}
 }

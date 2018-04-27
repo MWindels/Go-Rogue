@@ -6,24 +6,6 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
-const (
-	displayNothing uint8 = iota
-	displayMainMenu
-	displayNewGame
-	displayEnvironment
-	displayPause
-)
-
-//Maps to the state of the game.  For all intents and purposes, this is read-only.
-var (
-	stateOverlays = [...]overlay{
-		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayMainMenu, addLabels(initCanvasConstants(), initLabel("GO ROGUE", termbox.ColorDefault, termbox.ColorBlack, initPoint(0.5, 0.1), xAlignCentre, yAlignCentre)))),
-		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayNewGame, addLabels(initCanvasConstants(), initLabel("Start a New Game...", termbox.ColorDefault, termbox.ColorBlack, initPoint(0.5, 0.15), xAlignCentre, yAlignCentre)))),
-		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayEnvironment, initCanvasConstants())),
-		addToOverlay(initOverlay(), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.0, 0.0, 1.0, 1.0), displayEnvironment, initCanvasConstants()), initCanvas(opaque, '▓', termbox.ColorDefault, termbox.ColorBlack, initRectangle(0.3, 0.3, 0.4, 0.4), displayPause, addLabels(initCanvasConstants(), initLabel("Game Paused", termbox.ColorDefault, termbox.ColorBlack, initPoint(0.5, 0.2), xAlignCentre, yAlignCentre)))),
-	}
-)
-
 //Sometimes the maxLineLen can be a little off due to rounding errors on canvases smaller than the screen size (maxLines is probably also affected)
 func drawLabel(border rectangle, lbl label) {
 	lblLen := float64(len([]rune(lbl.text)))
@@ -69,6 +51,18 @@ func drawCanvasConstants(border rectangle, cc canvasConstants) {
 	}
 }
 
+func drawSelection(border rectangle, selections []label, selected uint) {
+	for i := 0; i < len(selections); i++ {
+		if i == int(selected) {
+			emboldened := selections[i]
+			emboldened.textColor ^= termbox.AttrBold
+			drawLabel(border, emboldened)
+		}else{
+			drawLabel(border, selections[i])
+		}
+	}
+}
+
 func drawBorder(border rectangle, borderCell termbox.Cell) {
 	for x := int(border.corners[upperLeft].x); x <= int(border.corners[upperRight].x); x++ {
 		termbox.SetCell(x, int(border.corners[upperLeft].y), borderCell.Ch, borderCell.Fg, borderCell.Bg)
@@ -80,7 +74,7 @@ func drawBorder(border rectangle, borderCell termbox.Cell) {
 	}
 }
 
-func drawOverlay(o overlay, env *environment) {
+func drawOverlay(o overlay, state uint, stRcv <-chan stateDescriptor, stRqst chan<- stateRequest) {
 	termWidth, termHeight := termbox.Size()
 	termXScale, termYScale := float64(termWidth - 1), float64(termHeight - 1)
 	for i := 0; i < len(o.canvases); i++ {
@@ -96,16 +90,38 @@ func drawOverlay(o overlay, env *environment) {
 		}
 		
 		//Draw Variable Canvas Contents
-		switch o.canvases[i].variableContents {
+		func(){
+			defer func(){recover()}()	//will only fire if state changes between when state was polled, and substate was polled
+			for j := 0; j < int(totalSubStates[state]); j++ {
+				if selectorMap[variableContentsKey{state: state, subStateIndex: uint(j), displayMode: o.canvases[i].variableContents}] != nil {
+					drawSelection(scaledBorder, selectorMap[variableContentsKey{state: state, subStateIndex: uint(j), displayMode: o.canvases[i].variableContents}], uint(getSubState(stRqst, stRcv, state, uint(j))))
+				}
+			}
+		}()
+		displayModeFunctions[o.canvases[i].variableContents](scaledBorder)
+		
+		/*switch o.canvases[i].variableContents {
 		case displayMainMenu:
-			
+			if state == stateMainMenu {
+				func(){
+					defer func(){recover()}()	//will only fire if state changes between when state was polled, and substate was polled
+					subState := getSubState(stRqst, stRcv, state, stateMainMenuSelectorIndex)
+					drawSelection(scaledBorder, YYY, uint(subState))		//need a place to store these labels (maybe store them as canvasConstants?)
+				}()
+			}
 		case displayNewGame:
 			
 		case displayEnvironment:
 			drawEnvironment(scaledBorder, env)
 		case displayPause:
-			
-		}
+			if state == statePausedGame {
+				func(){
+					defer func(){recover()}()	//the comment above applies here, too
+					subState := getSubState(stRqst, stRcv, state, statePausedGameSelectorIndex)
+					drawSelection(scaledBorder, YYY2, uint(subState))
+				}()
+			}
+		}*/
 		
 		//Draw Constant Canvas Contents
 		drawCanvasConstants(scaledBorder, o.canvases[i].constantContents)
@@ -133,15 +149,16 @@ func drawEnvironment(border rectangle, env *environment) {
 	env.mutex.RUnlock()
 }
 
-func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan uint8, stRqst chan<- bool, sstRcv <-chan int, sstRqst chan<- uint) {
+func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan stateDescriptor, stRqst chan<- stateRequest) {
 	envRqst <- true
 	env := <- envRcv
+	displayModeFunctions[displayEnvironment] = func(border rectangle){drawEnvironment(border, env)}
 	
 	for {
-		time.Sleep(time.Second)
+		time.Sleep(time.Second / 30)
 		
-		stRqst <- true
-		drawOverlay(stateOverlays[<- stRcv], env)
+		state := getState(stRqst, stRcv)
+		drawOverlay(stateOverlays[state], state, stRcv, stRqst)
 		
 		err := termbox.Flush()
 		if err != nil {

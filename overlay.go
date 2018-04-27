@@ -15,7 +15,7 @@ type canvas struct {
 	attributes uint8
 	borderCell termbox.Cell
 	border rectangle
-	variableContents uint8
+	variableContents uint
 	constantContents canvasConstants
 }
 
@@ -47,7 +47,7 @@ func canvasConstantsEqual(a, b canvasConstants) bool {
 	return true
 }
 
-func initCanvas(a uint8, t rune, tfg, tbg termbox.Attribute, r rectangle, vc uint8, cc canvasConstants) canvas {
+func initCanvas(a uint8, t rune, tfg, tbg termbox.Attribute, r rectangle, vc uint, cc canvasConstants) canvas {
 	c := canvas{
 		attributes: a,
 		borderCell: termbox.Cell{Ch: t, Fg: tfg, Bg: tbg},

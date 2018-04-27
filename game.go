@@ -2,27 +2,9 @@ package main
 
 import "github.com/nsf/termbox-go"
 
-const (
-	stateMainMenu uint8 = iota
-	stateNewGame
-	stateRunningGame
-	statePausedGame
-	stateExit
-	totalStates
-)
-
-var (
-	subStatesByState [totalStates]uint = [totalStates]uint{1, 1, 0, 1, 0}
-)
-
-type subStateModification struct {
-	index uint
-	value int
-}
-
 type game struct {
-	state uint8
-	subState []int
+	state uint
+	subStates []int
 	
 	envSnd chan *environment
 	envRqst chan bool
@@ -30,27 +12,15 @@ type game struct {
 	
 	entSnd chan *entity
 	
-	stSnd chan uint8
-	stRqst chan bool
-	stMdfy chan uint8
-	
-	sstSnd chan int
-	sstRqst chan uint
-	sstMdfy chan subStateModification
-}
-
-func initSubStateModification(ind uint, val int) subStateModification {
-	ssm := subStateModification{
-		index: ind,
-		value: val,
-	}
-	return ssm
+	stSnd chan stateDescriptor
+	stRqst chan stateRequest
+	stMdfy chan stateDescriptor
 }
 
 func initGame() game {
 	g := game{
 		state: stateMainMenu,
-		subState: make([]int, subStatesByState[stateMainMenu], subStatesByState[stateMainMenu]),
+		subStates: make([]int, int(totalSubStates[stateMainMenu]), int(totalSubStates[stateMainMenu])),
 		
 		envSnd: make(chan *environment),
 		envRqst: make(chan bool),
@@ -58,14 +28,11 @@ func initGame() game {
 		
 		entSnd: make(chan *entity),
 		
-		stSnd: make(chan uint8),
-		stRqst: make(chan bool),
-		stMdfy: make(chan uint8),
-		
-		sstSnd: make(chan int),
-		sstRqst: make(chan uint),
-		sstMdfy: make(chan subStateModification),
+		stSnd: make(chan stateDescriptor),
+		stRqst: make(chan stateRequest),
+		stMdfy: make(chan stateDescriptor),
 	}
+	copy(g.subStates, subStateInitialValues[stateMainMenu])
 	return g
 }
 
@@ -80,27 +47,38 @@ func main() {
 	
 	//Testing stuff
 	go runEnvController(g.envSnd, g.envRqst, g.envMdfy, g.entSnd)
-	go runRenderer(g.envSnd, g.envRqst, g.stSnd, g.stRqst, g.sstSnd, g.sstRqst)
-	go runInputParser(g.envSnd, g.envRqst, g.envMdfy, g.stSnd, g.stRqst, g.stMdfy, g.sstSnd, g.sstRqst, g.sstMdfy)
+	go runRenderer(g.envSnd, g.envRqst, g.stSnd, g.stRqst)
+	go runInputParser(g.envSnd, g.envRqst, g.envMdfy, g.stSnd, g.stRqst, g.stMdfy)
 	go runEntity(g.envSnd, g.envRqst, g.entSnd)
 	//Testing stuff
 	
 	for g.state != stateExit {
 		select{
-		case <- g.stRqst:
-			g.stSnd <- g.state
-		case newState := <- g.stMdfy:
-			if 0 <= newState && newState < totalStates {
-				g.state = newState
-				g.subState = make([]int, subStatesByState[g.state], subStatesByState[g.state])
+		case req := <- g.stRqst:
+			if req.reqType == stateType {
+				g.stSnd <- initStateDesc(g.state)
+			}else if req.reqType == subStateType {
+				if req.subStateIndex < uint(len(g.subStates)) {
+					g.stSnd <- initSubStateDesc(g.state, g.subStates[req.subStateIndex], req.subStateIndex)
+				}else{
+					g.stSnd <- initErrorDesc()
+				}
+			}else{
+				g.stSnd <- initErrorDesc()
 			}
-		case index := <- g.sstRqst:
-			if index < subStatesByState[g.state] {
-				g.sstSnd <- g.subState[index]
-			}
-		case modification := <- g.sstMdfy:
-			if modification.index < subStatesByState[g.state] {
-				g.subState[modification.index] = modification.value
+		case mod := <- g.stMdfy:
+			if mod.state < totalStates {
+				if mod.descType == stateType {
+					g.state = mod.state
+					g.subStates = make([]int, int(totalSubStates[g.state]), int(totalSubStates[g.state]))
+					copy(g.subStates, subStateInitialValues[g.state])
+				}else if mod.descType == subStateType {
+					if mod.state == g.state {
+						if mod.subStateIndex < uint(len(g.subStates)) {
+							g.subStates[mod.subStateIndex] = mod.subState
+						}
+					}
+				}
 			}
 		}
 	}
