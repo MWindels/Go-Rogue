@@ -1,6 +1,9 @@
 package main
 
-import "github.com/nsf/termbox-go"
+import (
+	"github.com/nsf/termbox-go"
+	"github.com/mwindels/go-rogue/geom"
+)
 
 const (
 	opaque uint8 = 1 << iota
@@ -14,7 +17,7 @@ type canvasConstants struct {
 type canvas struct {
 	attributes uint8
 	borderCell termbox.Cell
-	border rectangle
+	border geom.Rectangle
 	variableContents uint
 	constantContents canvasConstants
 }
@@ -47,7 +50,7 @@ func canvasConstantsEqual(a, b canvasConstants) bool {
 	return true
 }
 
-func initCanvas(a uint8, t rune, tfg, tbg termbox.Attribute, r rectangle, vc uint, cc canvasConstants) canvas {
+func initCanvas(a uint8, t rune, tfg, tbg termbox.Attribute, r geom.Rectangle, vc uint, cc canvasConstants) canvas {
 	c := canvas{
 		attributes: a,
 		borderCell: termbox.Cell{Ch: t, Fg: tfg, Bg: tbg},
@@ -63,7 +66,7 @@ func canvasesEqual(a, b canvas) bool {
 			a.borderCell.Ch == b.borderCell.Ch &&
 			a.borderCell.Fg == b.borderCell.Fg &&
 			a.borderCell.Bg == b.borderCell.Bg &&
-			rectanglesEqual(a.border, b.border) &&
+			geom.RectanglesEqual(a.border, b.border) &&
 			a.variableContents == b.variableContents &&
 			canvasConstantsEqual(a.constantContents, b.constantContents))
 }
@@ -95,9 +98,10 @@ func canvasLayerOverlaps(o overlay, i int) bool {
 	if i > len(o.canvases) {
 		i = len(o.canvases)
 	}
+	
 	for n := 0; n < i; n++ {
 		for m := 0; m < 4; m++ {
-			if rectangleContains(o.canvases[i].border, o.canvases[n].border.corners[m]) || rectangleContains(o.canvases[n].border, o.canvases[i].border.corners[m]) {
+			if geom.RectangleContains(o.canvases[i].border, o.canvases[n].border.Corner(m)) || geom.RectangleContains(o.canvases[n].border, o.canvases[i].border.Corner(m)) {
 				return true
 			}
 		}

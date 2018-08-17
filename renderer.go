@@ -4,30 +4,31 @@ import (
 	"time"
 	"math"
 	"github.com/nsf/termbox-go"
+	"github.com/mwindels/go-rogue/geom"
 )
 
 //Sometimes the maxLineLen can be a little off due to rounding errors on canvases smaller than the screen size (maxLines is probably also affected)
-func drawLabel(border rectangle, lbl label) {
+func drawLabel(border geom.Rectangle, lbl label) {
 	lblLen := float64(len([]rune(lbl.text)))
-	lblPoint := initPoint(math.Min(math.Max(border.corners[upperLeft].x + lbl.location.x * (border.corners[upperRight].x - border.corners[upperLeft].x), math.Floor(border.corners[upperLeft].x) + 1), math.Floor(border.corners[upperRight].x) - 1),
-							math.Min(math.Max(border.corners[upperLeft].y + lbl.location.y * (border.corners[lowerLeft].y - border.corners[upperLeft].y), math.Floor(border.corners[upperLeft].y) + 1), math.Floor(border.corners[lowerLeft].y) - 1))
-	maxLineLen := math.Floor(border.corners[upperRight].x - lblPoint.x)
-	initialX := lblPoint.x
+	lblPoint := geom.InitPoint(math.Min(math.Max(border.UpperLeft().X + lbl.location.X * (border.UpperRight().X - border.UpperLeft().X), math.Floor(border.UpperLeft().X) + 1), math.Floor(border.UpperRight().X) - 1),
+							math.Min(math.Max(border.UpperLeft().Y + lbl.location.Y * (border.LowerLeft().Y - border.UpperLeft().Y), math.Floor(border.UpperLeft().Y) + 1), math.Floor(border.LowerLeft().Y) - 1))
+	maxLineLen := math.Floor(border.UpperRight().X - lblPoint.X)
+	initialX := lblPoint.X
 	if lbl.xAlign == xAlignCentre {
-		maxLineLen = math.Floor(2 * math.Min(border.corners[upperRight].x - lblPoint.x, lblPoint.x - border.corners[upperLeft].x)) - 1
-		initialX = lblPoint.x - maxLineLen / 2 + 1
+		maxLineLen = math.Floor(2 * math.Min(border.UpperRight().X - lblPoint.X, lblPoint.X - border.UpperLeft().X)) - 1
+		initialX = lblPoint.X - maxLineLen / 2 + 1
 	}else if lbl.xAlign == xAlignRight {
-		maxLineLen = math.Floor(lblPoint.x - border.corners[upperLeft].x)
-		initialX = lblPoint.x - maxLineLen + 1
+		maxLineLen = math.Floor(lblPoint.X - border.UpperLeft().X)
+		initialX = lblPoint.X - maxLineLen + 1
 	}
-	maxLines := math.Floor(border.corners[lowerLeft].y - lblPoint.y)
-	initialY := lblPoint.y
+	maxLines := math.Floor(border.LowerLeft().Y - lblPoint.Y)
+	initialY := lblPoint.Y
 	if lbl.yAlign == yAlignCentre {
-		maxLines = math.Floor(2 * math.Min(border.corners[lowerLeft].y - lblPoint.y, lblPoint.y - border.corners[upperLeft].y)) - 1
-		initialY = lblPoint.y - maxLines / 2 + 1
+		maxLines = math.Floor(2 * math.Min(border.LowerLeft().Y - lblPoint.Y, lblPoint.Y - border.UpperLeft().Y)) - 1
+		initialY = lblPoint.Y - maxLines / 2 + 1
 	}else if lbl.yAlign == yAlignAbove {
-		maxLines = math.Floor(lblPoint.y - border.corners[upperLeft].y)
-		initialY = lblPoint.y - maxLines + 1
+		maxLines = math.Floor(lblPoint.Y - border.UpperLeft().Y)
+		initialY = lblPoint.Y - maxLines + 1
 	}
 	usedY := int(math.Min(math.Ceil(lblLen / maxLineLen), maxLines))
 	for y := 0; y < usedY; y++ {
@@ -45,13 +46,13 @@ func drawLabel(border rectangle, lbl label) {
 	}
 }
 
-func drawCanvasConstants(border rectangle, cc canvasConstants) {
+func drawCanvasConstants(border geom.Rectangle, cc canvasConstants) {
 	for i := 0; i < len(cc.labels); i++ {
 		drawLabel(border, cc.labels[i])
 	}
 }
 
-func drawSelection(border rectangle, selections []label, selected uint) {
+func drawSelection(border geom.Rectangle, selections []label, selected uint) {
 	for i := 0; i < len(selections); i++ {
 		if i == int(selected) {
 			emboldened := selections[i]
@@ -63,14 +64,14 @@ func drawSelection(border rectangle, selections []label, selected uint) {
 	}
 }
 
-func drawBorder(border rectangle, borderCell termbox.Cell) {
-	for x := int(border.corners[upperLeft].x); x <= int(border.corners[upperRight].x); x++ {
-		termbox.SetCell(x, int(border.corners[upperLeft].y), borderCell.Ch, borderCell.Fg, borderCell.Bg)
-		termbox.SetCell(x, int(border.corners[lowerLeft].y), borderCell.Ch, borderCell.Fg, borderCell.Bg)
+func drawBorder(border geom.Rectangle, borderCell termbox.Cell) {
+	for x := int(border.UpperLeft().X); x <= int(border.UpperRight().X); x++ {
+		termbox.SetCell(x, int(border.UpperLeft().Y), borderCell.Ch, borderCell.Fg, borderCell.Bg)
+		termbox.SetCell(x, int(border.LowerLeft().Y), borderCell.Ch, borderCell.Fg, borderCell.Bg)
 	}
-	for y := int(border.corners[upperLeft].y); y <= int(border.corners[lowerLeft].y); y++ {
-		termbox.SetCell(int(border.corners[upperLeft].x), y, borderCell.Ch, borderCell.Fg, borderCell.Bg)
-		termbox.SetCell(int(border.corners[upperRight].x), y, borderCell.Ch, borderCell.Fg, borderCell.Bg)
+	for y := int(border.UpperLeft().Y); y <= int(border.LowerLeft().Y); y++ {
+		termbox.SetCell(int(border.UpperLeft().X), y, borderCell.Ch, borderCell.Fg, borderCell.Bg)
+		termbox.SetCell(int(border.UpperRight().X), y, borderCell.Ch, borderCell.Fg, borderCell.Bg)
 	}
 }
 
@@ -80,10 +81,10 @@ func drawOverlay(o overlay, state uint, stRcv <-chan stateDescriptor, stRqst cha
 	for i := 0; i < len(o.canvases); i++ {
 		
 		//Draw Canvas Background
-		scaledBorder := scaleRectangle(o.canvases[i].border, termXScale, termYScale)
+		scaledBorder := geom.ScaleRectangle(o.canvases[i].border, termXScale, termYScale)
 		if (o.canvases[i].attributes & opaque) != 0 && canvasLayerOverlaps(o, i) {
-			for x := int(scaledBorder.corners[upperLeft].x) + 1; x < int(scaledBorder.corners[upperRight].x); x++ {
-				for y := int(scaledBorder.corners[upperLeft].y) + 1; y < int(scaledBorder.corners[lowerLeft].y); y++ {
+			for x := int(scaledBorder.UpperLeft().X) + 1; x < int(scaledBorder.UpperRight().X); x++ {
+				for y := int(scaledBorder.UpperLeft().Y) + 1; y < int(scaledBorder.LowerLeft().Y); y++ {
 					termbox.SetCell(x, y, ' ', 0, 0)
 				}
 			}
@@ -133,12 +134,12 @@ func drawOverlay(o overlay, state uint, stRcv <-chan stateDescriptor, stRqst cha
 	}
 }
 
-func drawEnvironment(border rectangle, env *environment) {
-	initialX := int(math.Max(math.Floor(border.corners[upperLeft].x + 1), math.Ceil(border.corners[upperLeft].x + (border.corners[upperRight].x - border.corners[upperLeft].x) / 2 - float64(env.width) / 2)))
-	initialY := int(math.Max(math.Floor(border.corners[upperLeft].y + 1), math.Ceil(border.corners[upperLeft].y + (border.corners[lowerLeft].y - border.corners[upperLeft].y) / 2 - float64(env.height) / 2)))
+func drawEnvironment(border geom.Rectangle, env *environment) {
+	initialX := int(math.Max(math.Floor(border.UpperLeft().X + 1), math.Ceil(border.UpperLeft().X + (border.UpperRight().X - border.UpperLeft().X) / 2 - float64(env.width) / 2)))
+	initialY := int(math.Max(math.Floor(border.UpperLeft().Y + 1), math.Ceil(border.UpperLeft().Y + (border.LowerLeft().Y - border.UpperLeft().Y) / 2 - float64(env.height) / 2)))
 	env.mutex.RLock()
-	for x := initialX; x < int(math.Min(border.corners[upperRight].x, float64(initialX + env.width))); x++ {
-		for y := initialY; y < int(math.Min(border.corners[lowerLeft].y, float64(initialY + env.height))); y++ {
+	for x := initialX; x < int(math.Min(border.UpperRight().X, float64(initialX + env.width))); x++ {
+		for y := initialY; y < int(math.Min(border.LowerLeft().Y, float64(initialY + env.height))); y++ {
 			if env.entities[x - initialX][y - initialY] != nil {
 				termbox.SetCell(x, y, env.entities[x - initialX][y - initialY].symbol, env.entities[x - initialX][y - initialY].color, 0)		//Perhaps Bg should depend on the status of the entity?
 			}else{
@@ -152,7 +153,7 @@ func drawEnvironment(border rectangle, env *environment) {
 func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan stateDescriptor, stRqst chan<- stateRequest) {
 	envRqst <- true
 	env := <- envRcv
-	displayModeFunctions[displayEnvironment] = func(border rectangle){drawEnvironment(border, env)}
+	displayModeFunctions[displayEnvironment] = func(border geom.Rectangle){drawEnvironment(border, env)}
 	
 	for {
 		time.Sleep(time.Second / 30)

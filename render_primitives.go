@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"github.com/nsf/termbox-go"
+	"github.com/mwindels/go-rogue/geom"
 )
 
 const (
@@ -21,12 +22,12 @@ type label struct {
 	text string
 	textColor termbox.Attribute
 	textHighlight termbox.Attribute
-	location point
+	location geom.Point
 	xAlign uint8
 	yAlign uint8
 }
 
-func initLabel(t string, tc, th termbox.Attribute, loc point, xa, ya uint8) label {
+func initLabel(t string, tc, th termbox.Attribute, loc geom.Point, xa, ya uint8) label {
 	l := label{
 		text: t,
 		textColor: tc,
@@ -48,13 +49,13 @@ func initLocationlessLabel(t string, tc, th termbox.Attribute) label {
 }
 
 func labelsEqual(a, b label) bool {
-	return ((strings.Compare(a.text, b.text) == 0) && a.textColor == b.textColor && a.textHighlight == b.textHighlight && pointsEqual(a.location, b.location) && (a.xAlign == b.xAlign) && (a.yAlign == b.yAlign))
+	return ((strings.Compare(a.text, b.text) == 0) && a.textColor == b.textColor && a.textHighlight == b.textHighlight && geom.PointsEqual(a.location, b.location) && (a.xAlign == b.xAlign) && (a.yAlign == b.yAlign))
 }
 
-func alignLabels(bounds rectangle, xa, ya uint8, ls ...label) []label {
-	x := bounds.corners[upperLeft].x + (bounds.corners[upperRight].x - bounds.corners[upperLeft].x) * (float64(xa) / 2)
+func alignLabels(bounds geom.Rectangle, xa, ya uint8, ls ...label) []label {
+	x := bounds.UpperLeft().X + (bounds.UpperRight().X - bounds.UpperLeft().X) * (float64(xa) / 2)
 	for i := 0; i < len(ls); i++ {
-		ls[i].location = initPoint(x, bounds.corners[upperLeft].y + (bounds.corners[lowerLeft].y - bounds.corners[upperLeft].y) * (float64(i + 1) / float64(len(ls) + 1)))
+		ls[i].location = geom.InitPoint(x, bounds.UpperLeft().Y + (bounds.LowerLeft().Y - bounds.UpperLeft().Y) * (float64(i + 1) / float64(len(ls) + 1)))
 		ls[i].xAlign = xa
 		ls[i].yAlign = ya
 	}
