@@ -40,12 +40,18 @@ func (node BSPNode) Traversability() uint {
 	return node.traversability
 }
 
-func (node BSPNode) Left() *BSPNode {
-	return node.left
+func (node BSPNode) Left() BSPNode {
+	if node.left == nil {
+		panic("Node has no left child.")
+	}
+	return *(node.left)
 }
 
-func (node BSPNode) Right() *BSPNode {
-	return node.right
+func (node BSPNode) Right() BSPNode {
+	if node.right == nil {
+		panic("Node has no right child.")
+	}
+	return *(node.right)
 }
 
 type BSPTree struct {
@@ -53,8 +59,11 @@ type BSPTree struct {
 	depth uint		//effectively the lowest level of the tree (starts at zero (root) sice a nodeless bsp tree doesn't make sense, as it wouldn't be partitioning anything)
 }
 
-func (tree BSPTree) Root() *BSPNode {
-	return tree.root
+func (tree BSPTree) Root() BSPNode {
+	if tree.root == nil {
+		panic("Tree has no root.")
+	}
+	return *(tree.root)
 }
 
 func (tree BSPTree) Depth() uint {

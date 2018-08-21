@@ -6,8 +6,8 @@ func runInputParser(envRcv <-chan *environment, envRqst chan<- bool, envMdfy cha
 	for {
 		event := termbox.PollEvent()
 		if event.Type == termbox.EventKey {
-			func(){
-				defer func(){recover()}()	//this could maybe print an informative message
+			func() {
+				defer func() {recover()}()	//this could maybe print an informative message
 				if event.Ch == 0 && event.Key == termbox.KeyEsc {
 					stMdfy <- initStateDesc(stateExit)
 				}
@@ -62,8 +62,8 @@ func runInputParser(envRcv <-chan *environment, envRqst chan<- bool, envMdfy cha
 			/*if event.Ch == 'n' {
 				stMdfy <- initStateDesc((getState(stRqst, stRcv) + 1) % stateExit)
 			}else if event.Ch == 'd' {
-				func(){
-					defer func(){recover()}()		//this could maybe print an informative message
+				func() {
+					defer func() {recover()}()		//this could maybe print an informative message
 					state := getState(stRqst, stRcv)
 					for i := 0; i < int(totalSubStates[state]); i++ {
 						subState := getSubState(stRqst, stRcv, state, uint(i))

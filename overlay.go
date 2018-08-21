@@ -100,10 +100,8 @@ func canvasLayerOverlaps(o overlay, i int) bool {
 	}
 	
 	for n := 0; n < i; n++ {
-		for m := 0; m < 4; m++ {
-			if geom.RectangleContains(o.canvases[i].border, o.canvases[n].border.Corner(m)) || geom.RectangleContains(o.canvases[n].border, o.canvases[i].border.Corner(m)) {
-				return true
-			}
+		if geom.RectanglesOverlap(o.canvases[n].border, o.canvases[i].border) {
+			return true
 		}
 	}
 	return false

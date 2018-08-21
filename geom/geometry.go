@@ -1,6 +1,9 @@
 package geom
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 const (
 	upperLeft int = iota
@@ -28,6 +31,10 @@ func InitPoint(x, y float64) Point {
 
 func PointsEqual(a, b Point) bool {
 	return (a.X == b.X && a.Y == b.Y)
+}
+
+func PointDistance(a, b Point) float64 {
+	return math.Sqrt(math.Pow(a.X - b.X, 2) + math.Pow(a.Y - b.Y, 2))
 }
 
 func InitRectangle(x, y, width, height float64) Rectangle {
@@ -64,9 +71,28 @@ func (r Rectangle) Corner(i int) Point {
 	return r.corners[i]
 }
 
+func (r Rectangle) Width() float64 {
+	return r.UpperRight().X - r.UpperLeft().X
+}
+
+func (r Rectangle) Height() float64 {
+	return r.LowerLeft().Y - r.UpperLeft().Y
+}
+
 func RectanglesEqual(a, b Rectangle) bool {
 	return PointsEqual(a.UpperLeft(), b.UpperLeft()) && PointsEqual(a.UpperRight(), b.UpperRight()) && PointsEqual(a.LowerRight(), b.LowerRight()) && PointsEqual(a.LowerLeft(), b.LowerLeft())
 }
+
+/*func RectanglesShareCorners(a, b Rectangle) bool {
+	for i := 0; i < 4; i++ {
+		for j := 0; j < 4; j++ {
+			if PointsEqual(a.Corner(i), b.Corner(j)) {
+				return true
+			}
+		}
+	}
+	return false
+}*/
 
 func ScaleRectangle(r Rectangle, xScale, yScale float64) Rectangle {
 	return InitRectangle(xScale * r.UpperLeft().X, yScale * r.UpperLeft().Y, xScale * (r.UpperRight().X - r.UpperLeft().X), yScale * (r.LowerLeft().Y - r.UpperLeft().Y))
@@ -74,4 +100,57 @@ func ScaleRectangle(r Rectangle, xScale, yScale float64) Rectangle {
 
 func RectangleContains(r Rectangle, p Point) bool {
 	return (r.UpperLeft().X < p.X && p.X < r.UpperRight().X) && (r.UpperLeft().Y < p.Y && p.Y < r.LowerLeft().Y)
+}
+
+func RectangleContainsInclusive(r Rectangle, p Point) bool {
+	return (r.UpperLeft().X <= p.X && p.X <= r.UpperRight().X) && (r.UpperLeft().Y <= p.Y && p.Y <= r.LowerLeft().Y)
+}
+
+/*func RectangleContainsSemiInclusive(r Rectangle, p Point) bool {
+	return (r.UpperLeft().X <= p.X && p.X < r.UpperRight().X) && (r.UpperLeft().Y <= p.Y && p.Y < r.LowerLeft().Y)
+}*/
+
+func RectanglesOverlap(a, b Rectangle) bool {
+	for i := 0; i < 4; i++ {
+		if RectangleContains(a, b.Corner(i)) || RectangleContains(b, a.Corner(i)) {
+			return true
+		}
+	}
+	return false
+}
+
+func RectangleDistance(a, b Rectangle) float64 {
+	if a.LowerRight().X < b.UpperLeft().X && a.LowerRight().Y < b.UpperLeft().Y {
+		return PointDistance(a.LowerRight(), b.UpperLeft())		//above and left
+	}else if a.LowerLeft().X > b.UpperRight().X && a.LowerLeft().Y < b.UpperRight().Y {
+		return PointDistance(a.LowerLeft(), b.UpperRight())		//above and right
+	}else if a.UpperLeft().X > b.LowerRight().X && a.UpperLeft().Y > b.LowerRight().Y {
+		return PointDistance(a.UpperLeft(), b.LowerRight())		//below and right
+	}else if a.UpperRight().X < b.LowerLeft().X && a.UpperRight().Y > b.LowerLeft().Y {
+		return PointDistance(a.UpperRight(), b.LowerLeft())		//below and left
+	}else if a.LowerLeft().Y < b.UpperLeft().Y {
+		return b.UpperLeft().Y - a.LowerLeft().Y	//above
+	}else if a.UpperLeft().X > b.UpperRight().X {
+		return a.UpperLeft().X - b.UpperRight().X	//right
+	}else if a.UpperLeft().Y > b.LowerLeft().Y {
+		return a.UpperLeft().Y - b.LowerLeft().Y	//below
+	}else if a.UpperRight().X < b.UpperLeft().X {
+		return b.UpperLeft().X - a.UpperRight().X	//left
+	}
+	return 0
+}
+
+func NearestRectangles(r Rectangle, rs ...Rectangle) ([]Rectangle, float64) {
+	distance := math.Inf(1)
+	var nearest []Rectangle
+	for _, current := range rs {
+		currentDistance := RectangleDistance(r, current)
+		if float32(currentDistance) < float32(distance) {
+			distance = currentDistance
+			nearest = []Rectangle{current}
+		}else if float32(currentDistance) == float32(distance) {
+			nearest = append(nearest, current)
+		}
+	}
+	return nearest, distance
 }

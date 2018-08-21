@@ -91,8 +91,8 @@ func drawOverlay(o overlay, state uint, stRcv <-chan stateDescriptor, stRqst cha
 		}
 		
 		//Draw Variable Canvas Contents
-		func(){
-			defer func(){recover()}()	//will only fire if state changes between when state was polled, and substate was polled
+		func() {
+			defer func() {recover()}()	//will only fire if state changes between when state was polled, and substate was polled
 			for j := 0; j < int(totalSubStates[state]); j++ {
 				if selectorMap[variableContentsKey{state: state, subStateIndex: uint(j), displayMode: o.canvases[i].variableContents}] != nil {
 					drawSelection(scaledBorder, selectorMap[variableContentsKey{state: state, subStateIndex: uint(j), displayMode: o.canvases[i].variableContents}], uint(getSubState(stRqst, stRcv, state, uint(j))))
@@ -104,8 +104,8 @@ func drawOverlay(o overlay, state uint, stRcv <-chan stateDescriptor, stRqst cha
 		/*switch o.canvases[i].variableContents {
 		case displayMainMenu:
 			if state == stateMainMenu {
-				func(){
-					defer func(){recover()}()	//will only fire if state changes between when state was polled, and substate was polled
+				func() {
+					defer func() {recover()}()	//will only fire if state changes between when state was polled, and substate was polled
 					subState := getSubState(stRqst, stRcv, state, stateMainMenuSelectorIndex)
 					drawSelection(scaledBorder, YYY, uint(subState))		//need a place to store these labels (maybe store them as canvasConstants?)
 				}()
@@ -116,8 +116,8 @@ func drawOverlay(o overlay, state uint, stRcv <-chan stateDescriptor, stRqst cha
 			drawEnvironment(scaledBorder, env)
 		case displayPause:
 			if state == statePausedGame {
-				func(){
-					defer func(){recover()}()	//the comment above applies here, too
+				func() {
+					defer func() {recover()}()	//the comment above applies here, too
 					subState := getSubState(stRqst, stRcv, state, statePausedGameSelectorIndex)
 					drawSelection(scaledBorder, YYY2, uint(subState))
 				}()
@@ -153,7 +153,7 @@ func drawEnvironment(border geom.Rectangle, env *environment) {
 func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan stateDescriptor, stRqst chan<- stateRequest) {
 	envRqst <- true
 	env := <- envRcv
-	displayModeFunctions[displayEnvironment] = func(border geom.Rectangle){drawEnvironment(border, env)}
+	displayModeFunctions[displayEnvironment] = func(border geom.Rectangle) {drawEnvironment(border, env)}
 	
 	for {
 		time.Sleep(time.Second / 30)

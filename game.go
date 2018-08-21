@@ -1,6 +1,10 @@
 package main
 
-import "github.com/nsf/termbox-go"
+import (
+	"time"
+	"math/rand"
+	"github.com/nsf/termbox-go"
+)
 
 type game struct {
 	state uint
@@ -42,6 +46,8 @@ func main() {
 		panic(err)
 	}
 	defer termbox.Close()
+	
+	rand.Seed(time.Now().UTC().UnixNano())
 	
 	g := initGame()
 	
