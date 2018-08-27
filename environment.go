@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	roomCreateLow float64 = 0.7
-	roomCreateHigh float64 = 0.8
+	roomCreateLow float64 = 0.8
+	roomCreateHigh float64 = 1.0
 	roomDestroyLow float64 = 0.9
 	roomDestroyHigh float64 = 1.0
 )
@@ -36,11 +36,17 @@ var (
 
 type environment struct {
 	mutex sync.RWMutex
+	paused sync.WaitGroup
+	
+	//Immutable
 	width int
 	height int
 	tiles [][]termbox.Cell
-	entities [][](*entity)
 	rooms adt.BSPTree
+	
+	//Mutable
+	entities [][](*entity)
+	player *entity
 }
 
 func generatePartitions(w, h int, partitionCount int) []geom.Point {
@@ -54,12 +60,15 @@ func generatePartitions(w, h int, partitionCount int) []geom.Point {
 func initEnvironment(w, h int) environment {
 	env := environment{
 		mutex: sync.RWMutex{},
+		paused: sync.WaitGroup{},
 		width: w,
 		height: h,
 		tiles: make([][]termbox.Cell, w),
-		entities: make([][](*entity), w),
 		rooms: adt.InitBSPTree(geom.InitRectangle(0.0, 0.0, float64(w), float64(h)), generatePartitions(w, h, w * h)),		//w * h is just a stand-in for a more complicated partition count function
+		entities: make([][](*entity), w),
+		player: nil,
 	}
+	env.paused.Add(1)
 	for row := 0; row < int(w); row++ {
 		env.tiles[row] = make([]termbox.Cell, h)
 		env.entities[row] = make([](*entity), h)
@@ -101,8 +110,8 @@ func (e *environment) generateRooms(randomizations int) {
 				}
 			}
 		}else{	//A semi-open node implies that the node is not a leaf, so no need to recover from Left() or Right().
-			stk.Push(node.Left())
 			stk.Push(node.Right())
+			stk.Push(node.Left())
 		}
 	}
 }
@@ -231,6 +240,18 @@ func (e *environment) connectRooms(node adt.BSPNode, depth uint) []geom.Rectangl
 			randomPair := nearestPairs[rand.Intn(len(nearestPairs))]
 			if nearestDistance > 0.0 {	//may need to prefer room pairs which share edges over those which only share corners (but both have a distance of 0).
 				hall = twoSegmentHall(randomPair[0], randomPair[1], depth % 2)
+			}else{
+				pairSharesEdge := false
+				for _, pair := range nearestPairs {
+					intersection := geom.RectanglesIntersection(pair[0], pair[1])
+					if intersection.Width() > 0.0 || intersection.Height() > 0.0 {
+						pairSharesEdge = true
+						break
+					}
+				}
+				if !pairSharesEdge {
+					hall = twoSegmentHall(randomPair[0], randomPair[1], depth % 2)
+				}
 			}
 		}else{
 			hall = threeSegmentHall(nearestLeft[rand.Intn(len(nearestLeft))], nearestRight[rand.Intn(len(nearestRight))], depth % 2)
@@ -238,26 +259,20 @@ func (e *environment) connectRooms(node adt.BSPNode, depth uint) []geom.Rectangl
 		
 		start, end := 0, len(hall)
 		for i, tile := range hall {
-			/*for j := 0; j < 4; j++ {
+			for j := 0; j < 4; j++ {
 				neighbour := geom.InitPoint(tile.X + neighbourPoints[2 * j + 1].X, tile.Y + neighbourPoints[2 * j + 1].Y)
-				if geom.RectangleContainsSemiInclusive(node.Area(), neighbour) {
+				if geom.RectangleContainsInclusive(node.Area(), neighbour) {
 					if e.tiles[int(neighbour.X)][int(neighbour.Y)] == floorTile {
-						end = i + 1
-					}else{
-						start = i
+						if geom.RectangleContainsInclusive(node.Right().Area(), neighbour) {
+							end = i + 1
+						}else{
+							start = i
+						}
 					}
 				}
 			}
 			if end < len(hall) {
 				break
-			}*/
-			if e.tiles[int(tile.X)][int(tile.Y)] == floorTile {
-				if geom.RectangleContainsInclusive(node.Right().Area(), tile) {
-					end = i
-					break
-				}else{
-					start = i + 1
-				}
 			}
 		}
 		
@@ -275,21 +290,34 @@ func generateEnvironment(e environment) environment {
 	return e
 }
 
-func runEnvController(envSnd chan<- *environment, envRqst <-chan bool, envMdfy <-chan bool, entRcv <-chan *entity) {			//remember, change the type of envMdfy some time
-	env := generateEnvironment(initEnvironment(100, 100))
+func (e *environment) populateRooms(envRcv <-chan *environment, envRqst chan<- bool) {
+	var stk adt.Stack
+	func() {
+		defer func() {recover()}()
+		stk.Push(e.rooms.Root())
+	}()
+	for !(stk.IsEmpty()) {
+		node, valid := stk.Pop().(adt.BSPNode)
+		if !valid {
+			panic("Popped an element from the room-populating stack that wasn't a BSPNode!")
+		}
+		if node.Traversability() == adt.SemiOpen {	//no recover required, since the calls below won't panic
+			stk.Push(node.Right())
+			stk.Push(node.Left())
+		}else if node.Traversability() == adt.Open {
+			go runEntity(envRcv, envRqst, initEntity('c', termbox.ColorRed, 250, int(node.Area().UpperLeft().X + rand.Float64() * node.Area().Width()), int(node.Area().UpperLeft().Y + rand.Float64() * node.Area().Height())))
+		}
+	}
+}
+
+func runEnvController(envSnd chan *environment, envRqst chan bool) {
+	env := generateEnvironment(initEnvironment(150, 150))
+	env.populateRooms(envSnd, envRqst)
 	
 	for {
 		select{
 			case <-envRqst:
 				envSnd <- &env
-			case modification := <-envMdfy:
-				env.mutex.Lock()
-				modification = !modification //Testing
-				env.mutex.Unlock()
-			case newEnt := <-entRcv:
-				env.mutex.Lock()
-				env.entities[newEnt.x][newEnt.y] = newEnt			//can't have two entities in the same place
-				env.mutex.Unlock()
 		}
 	}
 }

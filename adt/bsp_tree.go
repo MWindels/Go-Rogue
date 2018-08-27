@@ -84,14 +84,14 @@ func hasSufficientPartition(space geom.Rectangle, sortedPartitions []geom.Point,
 			minPartitionSize = MinPartitionWidth
 			getLeftSize = func() float64 {return sortedPartitions[partitionMedian()].X - space.UpperLeft().X}
 			getRightSize = func() float64 {return space.UpperRight().X - sortedPartitions[partitionMedian()].X}
-			getLeftSpace = func() geom.Rectangle {return geom.InitRectangle(space.UpperLeft().X, space.UpperLeft().Y, getLeftSize(), space.LowerLeft().Y - space.UpperLeft().Y)}
-			getRightSpace = func() geom.Rectangle {return geom.InitRectangle(sortedPartitions[partitionMedian()].X, space.UpperLeft().Y, getRightSize(), space.LowerLeft().Y - space.UpperLeft().Y)}
+			getLeftSpace = func() geom.Rectangle {return geom.InitRectangle(space.UpperLeft().X, space.UpperLeft().Y, getLeftSize(), space.Height())}
+			getRightSpace = func() geom.Rectangle {return geom.InitRectangle(sortedPartitions[partitionMedian()].X, space.UpperLeft().Y, getRightSize(), space.Height())}
 		}else{
 			minPartitionSize = MinPartitionHeight
 			getLeftSize = func() float64 {return sortedPartitions[partitionMedian()].Y - space.UpperLeft().Y}
 			getRightSize = func() float64 {return space.LowerLeft().Y - sortedPartitions[partitionMedian()].Y}
-			getLeftSpace = func() geom.Rectangle {return geom.InitRectangle(space.UpperLeft().X, space.UpperLeft().Y, space.UpperRight().X - space.UpperLeft().X, getLeftSize())}
-			getRightSpace = func() geom.Rectangle {return geom.InitRectangle(space.UpperLeft().X, sortedPartitions[partitionMedian()].Y, space.UpperRight().X - space.UpperLeft().X, getRightSize())}
+			getLeftSpace = func() geom.Rectangle {return geom.InitRectangle(space.UpperLeft().X, space.UpperLeft().Y, space.Width(), getLeftSize())}
+			getRightSpace = func() geom.Rectangle {return geom.InitRectangle(space.UpperLeft().X, sortedPartitions[partitionMedian()].Y, space.Width(), getRightSize())}
 		}
 		
 		for partitionMin <= partitionMax {
@@ -133,10 +133,10 @@ func constructBSPTree(space geom.Rectangle, partitions []geom.Point, depth uint)
 }
 
 func InitBSPTree(initialArea geom.Rectangle, partitions []geom.Point) BSPTree {
-	if initialArea.UpperRight().X - initialArea.UpperLeft().X < MinPartitionWidth {
+	if initialArea.Width() < MinPartitionWidth {
 		panic(fmt.Sprintf("The width of the given space is less than the minimum of %d.", MinPartitionWidth))
 	}
-	if initialArea.LowerLeft().Y - initialArea.UpperLeft().Y < MinPartitionHeight {
+	if initialArea.Height() < MinPartitionHeight {
 		panic(fmt.Sprintf("The height of the given space is less than the minimum of %d.", MinPartitionHeight))
 	}
 	rootNode, treeDepth := constructBSPTree(initialArea, partitions, 0)

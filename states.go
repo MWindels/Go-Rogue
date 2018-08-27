@@ -163,3 +163,23 @@ func getSubState(rqst chan<- stateRequest, rcv <-chan stateDescriptor, state uin
 	}
 	return desc.subState
 }
+
+////Full Modify Functions////
+
+func setState(mdfy chan<- stateDescriptor, ack <-chan stateDescriptor, state uint) {
+	desc := initStateDesc(state)
+	mdfy <- desc
+	result := <-ack
+	if desc.descType != result.descType || desc.state != result.state {
+		panic(fmt.Sprintf("State was not changed to %d.", state))
+	}
+}
+
+func setSubState(mdfy chan<- stateDescriptor, ack <-chan stateDescriptor, state uint, subState int, subStateIndex uint) {
+	desc := initSubStateDesc(state, subState, subStateIndex)
+	mdfy <- desc
+	result := <-ack
+	if desc.descType != result.descType || desc.state != result.state || desc.subState != result.subState || desc.subStateIndex != result.subStateIndex {
+		panic(fmt.Sprintf("Sub-State %d was not changed to %d (where state is %d).", subStateIndex, subState, state))
+	}
+}

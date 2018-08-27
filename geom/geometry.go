@@ -83,19 +83,8 @@ func RectanglesEqual(a, b Rectangle) bool {
 	return PointsEqual(a.UpperLeft(), b.UpperLeft()) && PointsEqual(a.UpperRight(), b.UpperRight()) && PointsEqual(a.LowerRight(), b.LowerRight()) && PointsEqual(a.LowerLeft(), b.LowerLeft())
 }
 
-/*func RectanglesShareCorners(a, b Rectangle) bool {
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
-			if PointsEqual(a.Corner(i), b.Corner(j)) {
-				return true
-			}
-		}
-	}
-	return false
-}*/
-
 func ScaleRectangle(r Rectangle, xScale, yScale float64) Rectangle {
-	return InitRectangle(xScale * r.UpperLeft().X, yScale * r.UpperLeft().Y, xScale * (r.UpperRight().X - r.UpperLeft().X), yScale * (r.LowerLeft().Y - r.UpperLeft().Y))
+	return InitRectangle(xScale * r.UpperLeft().X, yScale * r.UpperLeft().Y, xScale * r.Width(), yScale * r.Height())
 }
 
 func RectangleContains(r Rectangle, p Point) bool {
@@ -106,9 +95,9 @@ func RectangleContainsInclusive(r Rectangle, p Point) bool {
 	return (r.UpperLeft().X <= p.X && p.X <= r.UpperRight().X) && (r.UpperLeft().Y <= p.Y && p.Y <= r.LowerLeft().Y)
 }
 
-/*func RectangleContainsSemiInclusive(r Rectangle, p Point) bool {
+func RectangleContainsLowerInclusive(r Rectangle, p Point) bool {
 	return (r.UpperLeft().X <= p.X && p.X < r.UpperRight().X) && (r.UpperLeft().Y <= p.Y && p.Y < r.LowerLeft().Y)
-}*/
+}
 
 func RectanglesOverlap(a, b Rectangle) bool {
 	for i := 0; i < 4; i++ {
@@ -117,6 +106,21 @@ func RectanglesOverlap(a, b Rectangle) bool {
 		}
 	}
 	return false
+}
+
+func RectanglesOverlapInclusive(a, b Rectangle) bool {
+	for i := 0; i < 4; i++ {
+		if RectangleContainsInclusive(a, b.Corner(i)) || RectangleContainsInclusive(b, a.Corner(i)) {
+			return true
+		}
+	}
+	return false
+}
+
+func RectanglesIntersection(a, b Rectangle) Rectangle {
+	upperLeft := InitPoint(math.Max(a.UpperLeft().X, b.UpperLeft().X), math.Max(a.UpperLeft().Y, b.UpperLeft().Y))
+	lowerRight := InitPoint(math.Min(a.LowerRight().X, b.LowerRight().X), math.Min(a.LowerRight().Y, b.LowerRight().Y))
+	return InitRectangle(upperLeft.X, upperLeft.Y, lowerRight.X - upperLeft.X, lowerRight.Y - upperLeft.Y)
 }
 
 func RectangleDistance(a, b Rectangle) float64 {

@@ -53,9 +53,9 @@ func labelsEqual(a, b label) bool {
 }
 
 func alignLabels(bounds geom.Rectangle, xa, ya uint8, ls ...label) []label {
-	x := bounds.UpperLeft().X + (bounds.UpperRight().X - bounds.UpperLeft().X) * (float64(xa) / 2)
+	x := bounds.UpperLeft().X + bounds.Width() * (float64(xa) / 2)
 	for i := 0; i < len(ls); i++ {
-		ls[i].location = geom.InitPoint(x, bounds.UpperLeft().Y + (bounds.LowerLeft().Y - bounds.UpperLeft().Y) * (float64(i + 1) / float64(len(ls) + 1)))
+		ls[i].location = geom.InitPoint(x, bounds.UpperLeft().Y + bounds.Height() * (float64(i + 1) / float64(len(ls) + 1)))
 		ls[i].xAlign = xa
 		ls[i].yAlign = ya
 	}

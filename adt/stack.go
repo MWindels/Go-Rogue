@@ -32,3 +32,7 @@ func (s *Stack) Pop() interface{} {
 	s.container = s.container[:(len(s.container) - 1)]
 	return item
 }
+
+func (s *Stack) Clear() {
+	s.container = [](interface{}){}
+}

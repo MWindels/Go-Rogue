@@ -10,8 +10,8 @@ import (
 //Sometimes the maxLineLen can be a little off due to rounding errors on canvases smaller than the screen size (maxLines is probably also affected)
 func drawLabel(border geom.Rectangle, lbl label) {
 	lblLen := float64(len([]rune(lbl.text)))
-	lblPoint := geom.InitPoint(math.Min(math.Max(border.UpperLeft().X + lbl.location.X * (border.UpperRight().X - border.UpperLeft().X), math.Floor(border.UpperLeft().X) + 1), math.Floor(border.UpperRight().X) - 1),
-							math.Min(math.Max(border.UpperLeft().Y + lbl.location.Y * (border.LowerLeft().Y - border.UpperLeft().Y), math.Floor(border.UpperLeft().Y) + 1), math.Floor(border.LowerLeft().Y) - 1))
+	lblPoint := geom.InitPoint(math.Min(math.Max(border.UpperLeft().X + lbl.location.X * border.Width(), math.Floor(border.UpperLeft().X) + 1), math.Floor(border.UpperRight().X) - 1),
+							math.Min(math.Max(border.UpperLeft().Y + lbl.location.Y * border.Height(), math.Floor(border.UpperLeft().Y) + 1), math.Floor(border.LowerLeft().Y) - 1))
 	maxLineLen := math.Floor(border.UpperRight().X - lblPoint.X)
 	initialX := lblPoint.X
 	if lbl.xAlign == xAlignCentre {
@@ -135,15 +135,19 @@ func drawOverlay(o overlay, state uint, stRcv <-chan stateDescriptor, stRqst cha
 }
 
 func drawEnvironment(border geom.Rectangle, env *environment) {
-	initialX := int(math.Max(math.Floor(border.UpperLeft().X + 1), math.Ceil(border.UpperLeft().X + (border.UpperRight().X - border.UpperLeft().X) / 2 - float64(env.width) / 2)))
-	initialY := int(math.Max(math.Floor(border.UpperLeft().Y + 1), math.Ceil(border.UpperLeft().Y + (border.LowerLeft().Y - border.UpperLeft().Y) / 2 - float64(env.height) / 2)))
+	//initialX := int(math.Max(math.Floor(border.UpperLeft().X + 1), math.Ceil(border.UpperLeft().X + border.Width() / 2 - float64(env.width) / 2)))
+	//initialY := int(math.Max(math.Floor(border.UpperLeft().Y + 1), math.Ceil(border.UpperLeft().Y + border.Height() / 2 - float64(env.height) / 2)))
 	env.mutex.RLock()
-	for x := initialX; x < int(math.Min(border.UpperRight().X, float64(initialX + env.width))); x++ {
-		for y := initialY; y < int(math.Min(border.LowerLeft().Y, float64(initialY + env.height))); y++ {
-			if env.entities[x - initialX][y - initialY] != nil {
-				termbox.SetCell(x, y, env.entities[x - initialX][y - initialY].symbol, env.entities[x - initialX][y - initialY].color, 0)		//Perhaps Bg should depend on the status of the entity?
-			}else{
-				termbox.SetCell(x, y, env.tiles[x - initialX][y - initialY].Ch, env.tiles[x - initialX][y - initialY].Fg, env.tiles[x - initialX][y - initialY].Bg)
+	if env.player != nil {
+		initialX := int(math.Ceil(border.UpperLeft().X + border.Width() / 2 - float64(env.player.x)))
+		initialY := int(math.Ceil(border.UpperLeft().Y + border.Height() / 2 - float64(env.player.y)))
+		for x := initialX; x < int(math.Min(border.UpperRight().X, float64(initialX + env.width))); x++ {
+			for y := initialY; y < int(math.Min(border.LowerLeft().Y, float64(initialY + env.height))); y++ {
+				if env.entities[x - initialX][y - initialY] != nil {
+					termbox.SetCell(x, y, env.entities[x - initialX][y - initialY].symbol, env.entities[x - initialX][y - initialY].color, 0)		//Perhaps Bg should depend on the status of the entity?
+				}else{
+					termbox.SetCell(x, y, env.tiles[x - initialX][y - initialY].Ch, env.tiles[x - initialX][y - initialY].Fg, env.tiles[x - initialX][y - initialY].Bg)
+				}
 			}
 		}
 	}
