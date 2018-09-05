@@ -13,7 +13,7 @@ type game struct {
 	envSnd chan *environment
 	envRqst chan bool
 	
-	plyrBuf chan termbox.Key
+	plyrBuf chan inputCommand
 	
 	stSnd chan stateDescriptor
 	stRqst chan stateRequest
@@ -28,7 +28,7 @@ func initGame() game {
 		envSnd: make(chan *environment),
 		envRqst: make(chan bool),
 		
-		plyrBuf: make(chan termbox.Key, 1028),
+		plyrBuf: make(chan inputCommand, 1028),
 		
 		stSnd: make(chan stateDescriptor),
 		stRqst: make(chan stateRequest),
@@ -44,6 +44,7 @@ func main() {
 		panic(err)
 	}
 	defer termbox.Close()
+	termbox.SetInputMode(termbox.InputEsc | termbox.InputMouse)
 	
 	rand.Seed(time.Now().UTC().UnixNano())
 	
@@ -52,11 +53,11 @@ func main() {
 	go runEnvController(g.envSnd, g.envRqst)
 	go runRenderer(g.envSnd, g.envRqst, g.stSnd, g.stRqst)
 	go runInputParser(g.envSnd, g.envRqst, g.plyrBuf, g.stSnd, g.stRqst, g.stMdfy)
-	go runPlayer(g.envSnd, g.envRqst, g.plyrBuf, initEntity('@', termbox.ColorDefault, 0, 0, 0))
+	go runPlayer(g.envSnd, g.envRqst, g.plyrBuf, g.stSnd, g.stMdfy, initEntity('@', termbox.ColorDefault, 100, 0, 0))
 	
 	for g.state != stateExit {
 		select{
-		case req := <- g.stRqst:
+		case req := <-g.stRqst:
 			if req.reqType == stateType {
 				g.stSnd <- initStateDesc(g.state)
 				break
@@ -67,7 +68,7 @@ func main() {
 				}
 			}
 			g.stSnd <- initErrorDesc()
-		case mod := <- g.stMdfy:
+		case mod := <-g.stMdfy:
 			if mod.state < totalStates {
 				if mod.descType == stateType {
 					g.state = mod.state

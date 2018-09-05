@@ -9,6 +9,7 @@ const (
 	stateNewGame
 	stateRunningGame
 	statePausedGame
+	stateGameOver
 	stateExit
 	totalStates
 )
@@ -48,6 +49,15 @@ const (
 	statePausedGameSelectorInit int = 0
 )
 
+//subStates: stateGameOver
+const (
+	stateGameOverSelectorIndex uint = iota
+	stateGameOverSubStates
+)
+const (
+	stateGameOverSelectorInit int = 0
+)
+
 //subStates: stateExit
 const (
 	stateExitSubStates uint = iota
@@ -60,6 +70,7 @@ var (
 		stateNewGameSubStates,
 		stateRunningGameSubStates,
 		statePausedGameSubStates,
+		stateGameOverSubStates,
 		stateExitSubStates,
 	}
 )
@@ -71,6 +82,7 @@ var (
 		[]int{stateNewGameSizeSelectorInit},
 		[]int{},
 		[]int{statePausedGameSelectorInit},
+		[]int{stateGameOverSelectorInit},
 		[]int{},
 	}
 )
@@ -155,7 +167,7 @@ func getSubState(rqst chan<- stateRequest, rcv <-chan stateDescriptor, state uin
 		panic(fmt.Sprintf("State %d does not have a subState %d.", state, subStateIndex))
 	}
 	rqst <- initSubStateReq(subStateIndex)
-	desc := <- rcv
+	desc := <-rcv
 	if desc.descType == errorType {
 		panic(fmt.Sprintf("State has changed from %d to %d.", state, getState(rqst, rcv)))
 	}else if desc.descType == subStateType && desc.state != state {

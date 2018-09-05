@@ -83,6 +83,10 @@ func RectanglesEqual(a, b Rectangle) bool {
 	return PointsEqual(a.UpperLeft(), b.UpperLeft()) && PointsEqual(a.UpperRight(), b.UpperRight()) && PointsEqual(a.LowerRight(), b.LowerRight()) && PointsEqual(a.LowerLeft(), b.LowerLeft())
 }
 
+/*func DiscretizeRectangle(r Rectangle) Rectangle {
+	return InitRectangle(math.Floor(r.UpperLeft().X), math.Floor(r.UpperLeft().Y), math.Ceil(r.UpperRight().X) - math.Floor(r.UpperLeft().X), math.Ceil(r.LowerLeft().Y) - math.Floor(r.UpperLeft().Y))
+}*/
+
 func ScaleRectangle(r Rectangle, xScale, yScale float64) Rectangle {
 	return InitRectangle(xScale * r.UpperLeft().X, yScale * r.UpperLeft().Y, xScale * r.Width(), yScale * r.Height())
 }

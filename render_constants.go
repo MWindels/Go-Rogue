@@ -12,6 +12,7 @@ const (
 	displayNewGame
 	displayEnvironment
 	displayPause
+	displayGameOver
 	totalDisplayModes
 )
 
@@ -22,6 +23,7 @@ var (
 		addToOverlay(initOverlay(), initCanvas(opaque, '█', termbox.ColorDefault, termbox.ColorBlack, geom.InitRectangle(0.0, 0.0, 1.0, 1.0), displayNewGame, addLabels(initCanvasConstants(), initLabel("Start a New Game...", termbox.ColorDefault, termbox.ColorBlack, geom.InitPoint(0.5, 0.15), xAlignCentre, yAlignCentre)))),
 		addToOverlay(initOverlay(), initCanvas(opaque, '█', termbox.ColorDefault, termbox.ColorBlack, geom.InitRectangle(0.0, 0.0, 1.0, 1.0), displayEnvironment, initCanvasConstants())),
 		addToOverlay(initOverlay(), initCanvas(opaque, '█', termbox.ColorDefault, termbox.ColorBlack, geom.InitRectangle(0.0, 0.0, 1.0, 1.0), displayEnvironment, initCanvasConstants()), initCanvas(opaque, '█', termbox.ColorDefault, termbox.ColorBlack, geom.InitRectangle(0.3, 0.3, 0.4, 0.4), displayPause, addLabels(initCanvasConstants(), initLabel("Game Paused", termbox.ColorDefault, termbox.ColorBlack, geom.InitPoint(0.5, 0.2), xAlignCentre, yAlignCentre)))),
+		addToOverlay(initOverlay(), initCanvas(opaque, '█', termbox.ColorDefault, termbox.ColorBlack, geom.InitRectangle(0.0, 0.0, 1.0, 1.0), displayEnvironment, initCanvasConstants()), initCanvas(opaque, '█', termbox.ColorDefault, termbox.ColorBlack, geom.InitRectangle(0.2, 0.1, 0.6, 0.2), displayGameOver, addLabels(initCanvasConstants(), initLabel("You have been slain...", termbox.ColorDefault, termbox.ColorBlack, geom.InitPoint(0.5, 0.25), xAlignCentre, yAlignCentre)))),
 	}
 )
 
@@ -37,6 +39,7 @@ var (
 	selectorMap = map[variableContentsKey]([]label){
 		variableContentsKey{state: stateMainMenu, subStateIndex: stateMainMenuSelectorIndex, displayMode: displayMainMenu}: alignLabels(geom.InitRectangle(0.5, 0.0, 0.0, 1.0), xAlignCentre, yAlignCentre, initLocationlessLabel("New Game", termbox.ColorDefault, termbox.ColorBlack), initLocationlessLabel("Options", termbox.ColorDefault, termbox.ColorBlack), initLocationlessLabel("Exit", termbox.ColorDefault, termbox.ColorBlack)),
 		variableContentsKey{state: statePausedGame, subStateIndex: statePausedGameSelectorIndex, displayMode: displayPause}: alignLabels(geom.InitRectangle(0.5, 0.2, 0.0, 0.8), xAlignCentre, yAlignCentre, initLocationlessLabel("Resume", termbox.ColorDefault, termbox.ColorBlack), initLocationlessLabel("Quit to Main Menu", termbox.ColorDefault, termbox.ColorBlack)),
+		variableContentsKey{state: stateGameOver, subStateIndex: stateGameOverSelectorIndex, displayMode: displayGameOver}: alignLabels(geom.InitRectangle(0.5, 0.25, 0.0, 0.75), xAlignCentre, yAlignCentre, initLocationlessLabel("Return to Main Menu", termbox.ColorDefault, termbox.ColorBlack)),
 	}
 )
 
@@ -45,6 +48,7 @@ var (
 //Functions to be called when a canvas is drawn.  Indexed by displayMode.  Some entries are supposed to be modified while the program is running, like the entry for displayEnvironment.
 var (
 	displayModeFunctions = [totalDisplayModes](func(geom.Rectangle)){
+		func(border geom.Rectangle) {},
 		func(border geom.Rectangle) {},
 		func(border geom.Rectangle) {},
 		func(border geom.Rectangle) {},

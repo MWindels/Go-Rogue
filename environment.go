@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	roomCreateLow float64 = 0.8
+	roomCreateLow float64 = 0.2
 	roomCreateHigh float64 = 1.0
-	roomDestroyLow float64 = 0.9
+	roomDestroyLow float64 = 0.5
 	roomDestroyHigh float64 = 1.0
 )
 
@@ -36,7 +36,7 @@ var (
 
 type environment struct {
 	mutex sync.RWMutex
-	paused sync.WaitGroup
+	paused adt.Barrier
 	
 	//Immutable
 	width int
@@ -60,7 +60,7 @@ func generatePartitions(w, h int, partitionCount int) []geom.Point {
 func initEnvironment(w, h int) environment {
 	env := environment{
 		mutex: sync.RWMutex{},
-		paused: sync.WaitGroup{},
+		paused: adt.InitBarrier(true),
 		width: w,
 		height: h,
 		tiles: make([][]termbox.Cell, w),
@@ -68,7 +68,6 @@ func initEnvironment(w, h int) environment {
 		entities: make([][](*entity), w),
 		player: nil,
 	}
-	env.paused.Add(1)
 	for row := 0; row < int(w); row++ {
 		env.tiles[row] = make([]termbox.Cell, h)
 		env.entities[row] = make([](*entity), h)
@@ -305,7 +304,12 @@ func (e *environment) populateRooms(envRcv <-chan *environment, envRqst chan<- b
 			stk.Push(node.Right())
 			stk.Push(node.Left())
 		}else if node.Traversability() == adt.Open {
-			go runEntity(envRcv, envRqst, initEntity('c', termbox.ColorRed, 250, int(node.Area().UpperLeft().X + rand.Float64() * node.Area().Width()), int(node.Area().UpperLeft().Y + rand.Float64() * node.Area().Height())))
+			/*for x := 0; x < int(node.Area().Width()); x++ {
+				for y := 0; y < int(node.Area().Height()); y++ {
+					go runEntity(envRcv, envRqst, initEntity('c', termbox.ColorRed, 500, int(node.Area().UpperLeft().X) + x, int(node.Area().UpperLeft().Y) + y))
+				}
+			}*/
+			go runEntity(envRcv, envRqst, initEntity('c', termbox.ColorRed, 500, int(node.Area().UpperLeft().X + rand.Float64() * node.Area().Width()), int(node.Area().UpperLeft().Y + rand.Float64() * node.Area().Height())))
 		}
 	}
 }

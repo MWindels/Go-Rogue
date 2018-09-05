@@ -156,7 +156,7 @@ func drawEnvironment(border geom.Rectangle, env *environment) {
 
 func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan stateDescriptor, stRqst chan<- stateRequest) {
 	envRqst <- true
-	env := <- envRcv
+	env := <-envRcv
 	displayModeFunctions[displayEnvironment] = func(border geom.Rectangle) {drawEnvironment(border, env)}
 	
 	for {
@@ -165,7 +165,7 @@ func runRenderer(envRcv <-chan *environment, envRqst chan<- bool, stRcv <-chan s
 		state := getState(stRqst, stRcv)
 		drawOverlay(stateOverlays[state], state, stRcv, stRqst)
 		
-		err := termbox.Flush()
+		err := termbox.Flush()	//this threw an error once, but I haven't been able to reproduce it!
 		if err != nil {
 			panic(err)
 		}
